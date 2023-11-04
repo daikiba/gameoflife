@@ -1,0 +1,143 @@
+<html>
+<head>
+<title>GoL</title>
+<style>
+table {
+  border-collapse: collapse;
+}
+table, td, tr {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+td {
+  min-width: 16px;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #111111;
+}
+.live {
+  background: #202020;
+}
+.dead {
+  background: #F0F0F0;
+}
+</style>
+<script type="text/javascript">
+let WIDTH = 100;
+let HEIGHT = 100;
+let TICK_MS = 80;
+let PAUSE_MS = 2000;
+let pause_ctr = 0;
+
+function gameClick(evt) {
+  if (evt != null && "TD" == evt.srcElement.nodeName) {
+    if (evt.srcElement.className == "dead") evt.srcElement.className = "live"
+    else evt.srcElement.className = "dead"
+  } else {
+    console.log("not a valid cell")
+  }
+  pause_ctr = 0;
+}
+
+function createRow(idx) {
+  let row = document.createElement("tr")
+  for (let i = 0; i < WIDTH; i++) {
+    let td = document.createElement("td")
+    td.className = "dead"
+    td.id = idx + "," + i
+    row.appendChild(td)
+  }
+  return row;
+}
+
+function init() {
+  for (let i = 0; i < HEIGHT; i++) {
+    game.appendChild(createRow(i))
+  }
+  game.onmousedown = gameClick
+  tick()
+}
+
+function addIfAndAlive(array, deadMayLive, cell, eY, eX) {
+  if (eY >= HEIGHT) eY = 0
+  else if (eY < 0) eY = HEIGHT - 1
+  if (eX >= WIDTH) eX = 0
+  else if (eX < 0) eX = WIDTH - 1
+
+  let elementId = eY + "," + eX
+  let element = document.getElementById(elementId)
+
+  if (element.className == "live") array.push(element)
+  else {
+    if (deadMayLive[elementId] == null) {
+      deadMayLive[elementId] = {"element": element, "around": []}
+    }
+    deadMayLive[elementId].around.push(cell)
+  }
+}
+
+function generationStep() {
+  let liveCells = document.getElementsByClassName("live")
+  let toDieCells = []
+  let toLiveCells = []
+  let cDeadToMaybeLive = {}
+  for (let i = 0; i < liveCells.length; i++) {
+    let c = liveCells[i]
+    let cPos = c.id.split(",")
+    let cY = cPos[0] - 0
+    let cX = cPos[1] - 0
+    let cAround = []
+    
+    addIfAndAlive(cAround, cDeadToMaybeLive, c, cY-1, cX-1)
+    addIfAndAlive(cAround, cDeadToMaybeLive, c, cY,   cX-1)
+    addIfAndAlive(cAround, cDeadToMaybeLive, c, cY+1, cX-1)
+    
+    addIfAndAlive(cAround, cDeadToMaybeLive, c, cY-1, cX)
+    addIfAndAlive(cAround, cDeadToMaybeLive, c, cY+1, cX)
+    
+    addIfAndAlive(cAround, cDeadToMaybeLive, c, cY-1, cX+1)
+    addIfAndAlive(cAround, cDeadToMaybeLive, c, cY,   cX+1)
+    addIfAndAlive(cAround, cDeadToMaybeLive, c, cY+1, cX+1)
+
+    //console.log(c.id + " neighbours " + cAround.length)
+    if (cAround.length < 2 || cAround.length > 3) {
+      toDieCells.push(c)
+    }
+  }
+  
+  for (let ci in cDeadToMaybeLive) {
+    let cO = cDeadToMaybeLive[ci]
+    let c = cO.element
+    let cAround = cO.around
+    //console.log(c.id + " neighbours " + cAround.length)
+    if (cAround.length == 3) {
+      toLiveCells.push(c)
+    }
+  }
+  
+  for (let c in toDieCells) {
+    toDieCells[c].className = "dead"
+  }
+  
+  for (let c in toLiveCells) {
+    toLiveCells[c].className = "live"
+  }
+}
+
+function tick() {
+  if (pause_ctr >= PAUSE_MS) {
+    generationStep()
+  } else {
+    pause_ctr += TICK_MS
+  }
+  setTimeout(tick, TICK_MS)
+}
+</script>
+</head>
+<body onload="init()">
+<table id="game">
+</table>
+</body>
+</html>
